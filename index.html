@@ -1,0 +1,82 @@
+<!doctype html>
+<html>
+  <head>
+    <title>Verification Example</title>
+    <script src="http://code.jquery.com/jquery-1.8.3.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jsencrypt/3.0.0-rc.1/jsencrypt.min.js" integrity="sha512-y23YXXpJcrZqfJDo+KYJDzkNjKXtgReeM2omZqbNgkmltq3vkRWh5+iFTFEWxiQQpo1A3PreyWBJ5gyjx4tZiw==" crossorigin="anonymous"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/crypto-js/4.0.0/crypto-js.min.js" integrity="sha512-nOQuvD9nKirvxDdvQ9OMqe2dgapbPB7vYAMrzJihw5m+aNcf0dX53m6YxM4LgA9u8e9eg9QX+/+mPu8kCNpV2A==" crossorigin="anonymous"></script>
+    <script type="text/javascript">
+
+      // Call this code when the page is done loading.
+      $(function() {
+
+        $('#roomdecrypt').click(function() {
+          try {
+            var encrypted = JSON.parse($.trim($('#roominput').val()));
+            console.log(encrypted);
+            // RSA Decrypt with the private key
+            var decryptor = new JSEncrypt();
+            decryptor.setPrivateKey($.trim($('#roomprivkey').val()));
+            var symKey = decryptor.decrypt(encrypted.encryptedSymKey);
+            // AES Decrypt data using symKey
+            var bytes  = CryptoJS.AES.decrypt(encrypted.encryptedData, symKey);
+            var originalText = bytes.toString(CryptoJS.enc.Utf8);
+            $('#roomoutput').val(originalText);
+            alert("Decrypted 🎉");
+          } catch(error) {
+            console.log(error);
+            alert("Decryption failed 😢");
+          }
+        });
+
+        $('#userverify').click(function() {
+          try {
+            var rawSignatureInput = $.trim($('#usersignature').val());
+            try {
+              // Unwrap if the signature is in {signature: signature} json structure.
+              var signature = JSON.parse(rawSignatureInput).signature;
+            } catch {
+              var signature = rawSignatureInput;
+            }
+            var data = $.trim($('#userdata').val());
+            var userpubkey = $.trim($('#userpubkey').val());
+            // Verify
+            var verfier = new JSEncrypt();
+            verfier.setPublicKey(userpubkey);
+            var verified = verfier.verify(data, signature, CryptoJS.SHA256);
+            $('#useroutput').val(verified);
+            if (!verified) {
+              throw new Error(verified);
+            }
+            alert("Signature valid 🎉");
+          } catch(error) {
+            console.log(error);
+            alert("Signature verification failed 😢");
+          }
+        });
+      });
+    </script>
+  </head>
+  <body>
+    <h1>Room End to End Encryption</h1>
+    <label for="roomprivkey">Room Private Key</label><br/>
+    <textarea id="roomprivkey" rows="15" cols="65"></textarea><br/>
+    <label for="roominput">Encrypted Data:</label><br/>
+    <textarea id="roominput" name="roominput" type="text" rows=15 cols=65></textarea><br/>
+    <input id="roomdecrypt" type="button" value="Decrypt Me!!!"/><br/>
+    <label for="roomoutput">Decryption result:</label><br/>
+    <textarea id="roomoutput" name="roomoutput" type="text" rows=15 cols=65>Decrypted data will show up here</textarea><br/>
+
+    <h1>User Signature Verification</h1>
+    <label for="userpubkey">User Public Key</label><br/>
+    <textarea id="userpubkey" name="userpubkey" rows="15" cols="65"></textarea><br/>
+    <label for="userdata">Plaintext data:</label><br/>
+    <textarea id="userdata" name="userdata" type="text" rows=15 cols=65></textarea><br/>
+    <label for="usersignature">Signature:</label><br/>
+    <textarea id="usersignature" name="usersignature" type="text" rows=15 cols=65></textarea><br/>
+    </textarea><br/>
+    <input id="userverify" type="button" value="Verify Me!!!"/><br/>
+    <label for="useroutput">Verification result:</label><br/>
+    <textarea id="useroutput" name="useroutput" type="text" rows=15 cols=65>Signature verification result will show up here</textarea><br/>
+  </body>
+</html>
